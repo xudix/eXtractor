@@ -1,0 +1,85 @@
+﻿<Window x:Class="eXtractor.MainWindowView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:eXtractor"
+        mc:Ignorable="d"
+        Title="Data eXtractor: Data Extraction and Visulization" Height="250" Width="600" MinWidth="300" MinHeight="100">
+    <Window.DataContext>
+        <local:MainWindowViewModel/>
+    </Window.DataContext>
+    <Window.Resources>
+        <local:StringArrayConverter x:Key="StrArrConverter"/>
+        <local:StringDateConverter x:Key="StrDateConverter"/>
+        <local:StringTimeConverter x:Key="StrTimeConverter"/>
+        <Style x:Key="DateTimeTextBox" TargetType="TextBox">
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Width" Value="100"/>
+            <EventSetter Event="GotKeyboardFocus" Handler="Textbox_GotFocus"/>
+            <EventSetter Event="MouseDoubleClick" Handler="Textbox_GotFocus"/>
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="SelectivelyIgnoreMouseButton"/>
+            <!-- EventSetter Event="GotFocus" Handler="Textbox_GotFocus"/-->
+        </Style>
+    </Window.Resources>
+    <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition />
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Label HorizontalAlignment="Left">Start Date</Label>
+        <TextBox x:Name="startDateInput" Grid.Column="1" Style="{StaticResource DateTimeTextBox}"
+                 Text="{Binding StartDate, Converter={StaticResource StrDateConverter}, Mode=TwoWay}"></TextBox>
+        <Label Grid.Column="3" HorizontalAlignment="Left">Start Time</Label>
+        <TextBox x:Name="startTimeInput" Grid.Column="4" Style="{StaticResource DateTimeTextBox}"
+                 Text="{Binding StartTime, Converter={StaticResource StrTimeConverter}, Mode=TwoWay}"></TextBox>
+        <Label Grid.Row="1" HorizontalAlignment="Left">End Date</Label>
+        <TextBox x:Name="endDateInput" Grid.Row="1" Grid.Column="1" Style="{StaticResource DateTimeTextBox}"
+                 Text="{Binding EndDate, Converter={StaticResource StrDateConverter}, Mode=TwoWay}"></TextBox>
+        <Label Grid.Row="1" Grid.Column="3" HorizontalAlignment="Left">End Time</Label>
+        <TextBox x:Name="endTimeInput" Grid.Row="1" Grid.Column="4" Style="{StaticResource DateTimeTextBox}"
+                 Text="{Binding EndTime, Converter={StaticResource StrTimeConverter}, Mode=TwoWay}"></TextBox>
+        <Label Grid.Row="2" HorizontalAlignment="Left">Tags</Label>
+        <Button x:Name="pickTagBottom" Grid.Row="2" Grid.Column="1" Margin="0,2" Command="{Binding PickTagCommand, Mode=OneWay}" >
+            Pick Tags
+        </Button>
+        <Label Grid.Row="2" Grid.Column="3" HorizontalAlignment="Left">Data Files</Label>
+        <Button x:Name="pickFileBottom" Grid.Row="2" Grid.Column="4" Margin="0,2" Width="100" 
+                HorizontalAlignment="Left" Command="{Binding PickFileCommand, Mode=OneTime}">
+            Pick Data Files
+        </Button>
+        <TextBox x:Name="tagInput" Grid.ColumnSpan="2" Grid.Row="3" Margin="5,0,0,0" VerticalScrollBarVisibility="Visible" AcceptsReturn="True" 
+                 Text="{Binding SelectedTags, Converter={StaticResource StrArrConverter}, ConverterParameter=tag, Mode=TwoWay}"></TextBox>
+        <TextBox x:Name="fileInput" Grid.ColumnSpan="2" Grid.Column="3" Grid.Row="3" Margin="5,0,0,0"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True"
+                 Text="{Binding SelectedFiles, Converter={StaticResource StrArrConverter}, ConverterParameter=file, Mode=TwoWay}"></TextBox>
+        <!-->
+        <TextBlock x:Name="testOutput1" Grid.Row="4" Text="{Binding StartDateTime, Mode=OneWay}"/>
+        <TextBlock x:Name="testOutput2" Grid.Row="4" Grid.Column ="3" Text="{Binding EndDateTime, Mode=OneWay}"/>
+        <-->
+        <Button Name="exportButton" Grid.Column="5" Grid.Row="4" Margin="0,4,0,0" >Export</Button>
+        <Button Name="plotButton" Grid.Column="6" Grid.Row="4" Margin="4,4,0,0">Plot</Button>
+
+        <Label Grid.Row="4" Grid.Column="0" HorizontalAlignment="Left">Data Interval</Label>
+        <TextBox x:Name="intervalInput" Grid.Row="4" Grid.Column="1"
+                 Text="{Binding Interval}" Margin="0,4,0,0"></TextBox>
+
+        <Label Grid.Row="4" Grid.Column="3" HorizontalAlignment="Left">Resolution</Label>
+        <TextBox x:Name="resolutionInput" Grid.Row="4" Grid.Column="4"
+                 Text="{Binding Resolution}" RenderTransformOrigin="0.506,0.996" Margin="0,4,172,0"></TextBox>
+
+    </Grid>
+</Window>
