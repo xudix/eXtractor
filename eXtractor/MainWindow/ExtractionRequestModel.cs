@@ -38,8 +38,6 @@ namespace eXtractor
             StartDateTime = DateTime.Now;
             EndDateTime = DateTime.Now;
             FilePath = String.Empty;
-            SelectedTags = new string[0];
-            SelectedFiles = new string[0];
             Resolution = 1000;
             Interval = 1;
         }
@@ -65,6 +63,19 @@ namespace eXtractor
             {
                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(ExtractionRequestModel));
                 xmlSerializer.Serialize(sw, this);
+            }
+        }
+
+        /// <summary>
+        /// Extract data as specified and export the data to a file
+        /// This method will create an ExtractedData object and call its WriteToFile method
+        /// </summary>
+        public void Export()
+        {
+            if (SelectedTags != null && SelectedFiles != null)
+            {
+                (new ExtractedData(this)).WriteToFile(StartDateTime, EndDateTime, "csv", FilePath);
+                SaveSettings();
             }
         }
 

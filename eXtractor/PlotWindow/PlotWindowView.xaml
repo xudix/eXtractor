@@ -1,0 +1,187 @@
+﻿<Window x:Class="eXtractor.PlotWindow.PlotWindowView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:eXtractor.PlotWindow"
+        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+        mc:Ignorable="d"
+        Name="plotWindow"
+        Title="Plot" Height="450" Width="900">
+    <Window.Resources>
+        <local:StringDateTimeConverter x:Key="StrDateTimeConverter"/>
+        <local:StrDoubleConverter x:Key="StrDoubleConverter"/>
+        <local:LegendWithValues x:Key="LegendWithValues"
+            Orientation="Vertical" Values="{Binding Path=Cursor1Values, Source={x:Reference Name=plotWindow}}" 
+            XValue ="{Binding Cursor1Time, Source={x:Reference Name=plotWindow}}"/>
+        <local:CursorHeightCalc x:Key="CursorHeightCalc"/>
+    </Window.Resources>
+    <DockPanel>
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
+                <Button Command="{Binding ZoomPreviousCommand}" Content="&lt;&lt;Previous Zoom" />
+
+                <Button Command="{Binding ZoomNextCommand}" Content="Next Zoom &gt;&gt;" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <Grid MouseLeftButtonUp="Chart_MouseLeftButtonUp" Background="Transparent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="{Binding ElementName=plotTitleInput, Path=Text}" Grid.Column="1" TextAlignment="Center"
+                       MouseMove="Chart_MouseMove" Background="Transparent"/>
+            <lvc:CartesianChart x:Name="Chart" Grid.Column="1" Grid.Row="1" Series="{Binding PointsToPlot}" LegendLocation="Right"
+                            DisableAnimations="True" Hoverable="False" DataTooltip="{x:Null}"
+                            MouseMove="Chart_MouseMove" Background="Transparent" MouseLeftButtonDown="Chart_MouseLeftButtonDown">
+                <lvc:CartesianChart.ChartLegend>
+                    <StaticResource ResourceKey="LegendWithValues"/>
+                </lvc:CartesianChart.ChartLegend>
+                <lvc:CartesianChart.AxisY>
+                    <lvc:Axis Name="YAxis" Title="{Binding Text, Source={x:Reference yTitleInput}, Mode=OneWay}" Foreground="Black"  
+                          MaxValue="{Binding YMax}" MinValue="{Binding YMin}">
+                    </lvc:Axis>
+                    <!-->For some reason you have to use x:Reference here. It seems that the TitleInput is not visible in Chart<-->
+                </lvc:CartesianChart.AxisY>
+                <lvc:CartesianChart.AxisX>
+                    <lvc:Axis Name="XAxis" Title="{Binding Text, Source={x:Reference xTitleInput}, Mode=OneWay}" Foreground="Black" Labels="{Binding DateTimeStrs}" ></lvc:Axis>
+                </lvc:CartesianChart.AxisX>
+            </lvc:CartesianChart>
+            <Rectangle x:Name="ZoomBox" Grid.Column="1" Width="{Binding ZoomBoxWidth}" Height="{Binding ZoomBoxHeight}" Margin="{Binding ZoomBoxMargin}"
+                       Stroke="#FF9000FF" StrokeThickness="1" Grid.Row="1" MouseMove="Chart_MouseMove">
+                <!--Most events at the chart will have to be added for the ZoomBox rectangle. 
+                Otherwise the program may not respond to the mouseup event-->
+                <Rectangle.Style>
+                    <Style TargetType="Rectangle">
+                        <Setter Property="Visibility" Value="Hidden"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsZoomDrawing}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Rectangle.Style>
+            </Rectangle>
+            <ContentControl Grid.Column="1" Grid.Row="1" MouseDoubleClick="Chart_MouseDoubleClick" MouseLeftButtonDown="Chart_MouseLeftButtonDown">
+                <Line x:Name="CursorLine1" Grid.Column="1" Grid.Row="1" 
+                       Stroke="Red" StrokeThickness="1" MouseMove="Chart_MouseMove" X1="{Binding Cursor1X}" X2="{Binding Cursor1X}"
+                       >
+                    <Line.Y2>
+                        <MultiBinding Converter="{StaticResource CursorHeightCalc}">
+                            <Binding ElementName="Chart" Path="ActualHeight"/>
+                            <Binding ElementName="XAxis" Path="ActualHeight"/>
+                        </MultiBinding>
+                    </Line.Y2>
+                    <!--Most events at the chart will have to be added for the ZoomBox rectangle. 
+                Otherwise the program may not respond to the mouseup event-->
+                    <Line.Style>
+                        <Style TargetType="Line">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsZoomDrawing}" Value="True">
+                                    <Setter Property="Visibility" Value="Hidden"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Line.Style>
+                </Line>
+            </ContentControl>
+            <!--TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ZoomBoxWidth}"/>
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ZoomBoxHeight}"/-->
+            <ToggleButton Name="settingButton" 
+                Grid.Column="2" HorizontalContentAlignment="Center" IsChecked="True">
+                <ToggleButton.Style>
+                    <Style TargetType="ToggleButton">
+                        <Setter Property="Content" Value="Options&gt;&gt; "/>
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Content" Value="Options&lt;&lt; "/>
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ToggleButton.Style>
+            </ToggleButton>
+            <ScrollViewer Grid.Column="3" Grid.RowSpan="3" Margin="5,0" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Setter Property="IsEnabled" Value="True"/>
+                        <Setter Property="Width" Value="Auto"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ElementName=settingButton, Path=IsChecked}" Value="False">
+                                <Setter Property="Visibility" Value="Hidden"/>
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Setter Property="Width" Value="0"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
+                <Grid Margin="0,0,5,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Label Grid.ColumnSpan="3" >Plot Title</Label>
+                    <TextBox x:Name="plotTitleInput" Grid.Row="1" Grid.ColumnSpan="3" Margin="10,0,0,0" >New Plot</TextBox>
+                    <Label Grid.Row="2" Grid.ColumnSpan="3">X Axis Title</Label>
+                    <TextBox x:Name="xTitleInput" Grid.Row="3" Grid.ColumnSpan="3" Margin="10,0,0,0" >Time</TextBox>
+                    <Label Grid.Row="4" Grid.ColumnSpan="3">YAxis Title</Label>
+                    <TextBox x:Name="yTitleInput" Grid.Row="5" Grid.ColumnSpan="3" Margin="10,0,0,0" >Value</TextBox>
+                    <Label Grid.Row="6" Grid.ColumnSpan="3">X Axis Range</Label>
+                    <Label Grid.Row="7" Margin="10,0,0,0">From</Label>
+                    <TextBox x:Name="xAxisMinnput" Grid.Row="7" Grid.Column="1" Margin="0,2"
+                            Text="{Binding StartDateTime, Converter={StaticResource StrDateTimeConverter}}" Width="120"/>
+                    <Button x:Name="xAxisMinReset" Grid.Row="7" Grid.Column="2" Margin="5,5,0,5" Click="XAxisMinReset_Click">Reset</Button>
+                    <Label Grid.Row="8" Margin="10,0,0,0">To</Label>
+                    <TextBox x:Name="xAxisMaxInput" Grid.Row="8" Grid.Column="1" Margin="0,2"
+                            Text="{Binding EndDateTime, Converter={StaticResource StrDateTimeConverter}}"></TextBox>
+                    <Button x:Name="xAxisMaxReset" Grid.Row="8" Grid.Column="2" Margin="5,5,0,5" Click="XAxisMaxReset_Click">Reset</Button>
+                    <Label Grid.Row="9" Grid.ColumnSpan="3">Y Axis Range</Label>
+                    <Label Grid.Row="10" Margin="10,0,0,0">From</Label>
+                    <TextBox x:Name="yAxisMinnput" Grid.Row="10" Grid.Column="1" Margin="0,2"
+                            Text="{Binding YMin, Converter={StaticResource StrDoubleConverter}}" />
+                    <Button x:Name="yAxisMinReset" Grid.Row="10" Grid.Column="2" Margin="5,5,0,5" Click="YAxisMinReset_Click">Reset</Button>
+                    <Label Grid.Row="11" Margin="10,0,0,0">To</Label>
+                    <TextBox x:Name="yAxisMaxInput" Grid.Row="11" Grid.Column="1" Margin="0,2" 
+                            Text="{Binding YMax, Converter={StaticResource StrDoubleConverter}}"></TextBox>
+                    <Button x:Name="yAxisMaxReset" Grid.Row="11" Grid.Column="2" Margin="5,5,0,5" Click="YAxisMaxReset_Click">Reset</Button>
+                    <Label Grid.Row="12">Resolution</Label>
+                    <TextBox x:Name="resolutionInput" Grid.Row="12" Grid.Column="1" Margin="0,2" Text="{Binding Resolution}"></TextBox>
+                    <CheckBox x:Name="SyncZoomCheckBox" Grid.Row="13" Grid.ColumnSpan="3" IsChecked="{Binding SyncZoom, Mode=TwoWay}">Synchronize Zooming</CheckBox>
+                    <Button x:Name="exportButton" Grid.Row="14" Grid.Column="2" Margin="5,5,0,5" Click="ExportButton_Click">Export</Button>
+                </Grid>
+            </ScrollViewer>
+
+        </Grid>
+    </DockPanel>
+</Window>

@@ -66,6 +66,16 @@
     <Compile Include="PickTagWindow\PickTagWindowView.xaml.cs">
       <DependentUpon>PickTagWindowView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PlotWindow\LegendWithValues.xaml.cs">
+      <DependentUpon>LegendWithValues.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PlotWindow\PlotRangeChangedEventArgs.cs" />
+    <Compile Include="PlotWindow\PlotWindowView.xaml.cs">
+      <DependentUpon>PlotWindowView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PlotWindow\PlotWindowViewModel.cs" />
+    <Compile Include="PlotWindow\SeriesWithValueViewModel.cs" />
+    <Compile Include="PlotWindow\ValueConverters.cs" />
     <Compile Include="RelayCommand.cs" />
     <Compile Include="ValueConverters.cs" />
     <Compile Include="XlsxReader.cs" />
@@ -84,6 +94,14 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="PickTagWindow\PickTagWindowView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PlotWindow\LegendWithValues.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PlotWindow\PlotWindowView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

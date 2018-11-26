@@ -18,15 +18,15 @@ namespace eXtractor
         // Constructor
         // The constructor will first construct a List of file recores, sort the records, figure out what files are needed,
         // then call ExtractData to get data
-        public ExtractedData(DateTime startDateTime, DateTime endDateTime, string[] tags, string[] dataFiles, int interval = 1)
+        public ExtractedData(ExtractionRequestModel request)
         {
-            Tags = new string[tags.Length];
-            tags.CopyTo(Tags, 0);
+            Tags = new string[request.SelectedTags.Length];
+            request.SelectedTags.CopyTo(Tags, 0);
             // Construct an array of the file records
             List<FileRecord> fileRecords = new List<FileRecord>();
             int i;
-            filePath = Path.GetDirectoryName(dataFiles[0]);
-            foreach (string fileName in dataFiles)
+            filePath = Path.GetDirectoryName(request.SelectedFiles[0]);
+            foreach (string fileName in request.SelectedFiles)
             {
                 FileRecord record = new FileRecord(fileName);
                 if (record.fileName != String.Empty)
@@ -36,15 +36,15 @@ namespace eXtractor
             if (fileRecords.Count == 0)
                 throw new ArgumentException("Invalid data file list");
             // If the start time is later than the end time, swap them
-            if (startDateTime > endDateTime)
+            if (request.StartDateTime > request.EndDateTime)
             {
-                DateTime temp = startDateTime;
-                startDateTime = endDateTime;
-                endDateTime = startDateTime;
+                DateTime temp = request.StartDateTime;
+                request.StartDateTime = request.EndDateTime;
+                request.EndDateTime = temp;
             }
             // Determine what files are needed
             // If request time ends before first file, no data is available
-            if (endDateTime < fileRecords[0].startTime)
+            if (request.EndDateTime < fileRecords[0].startTime)
                 throw new ArgumentException("Requested Date and Time Not Available in Selected Data Files");
             else if (fileRecords.Count > 1)
             {
@@ -53,12 +53,12 @@ namespace eXtractor
                 for (i = 0; i < fileRecords.Count - 1;)
                 {
                     // if next file start before start datetime
-                    if (fileRecords[i + 1].startTime <= startDateTime)
+                    if (fileRecords[i + 1].startTime <= request.StartDateTime)
                         fileRecords.RemoveAt(i);
                     else
                     {
                         // if next file start after start DateTime. This file is needed.
-                        if (fileRecords[i + 1].startTime > endDateTime)
+                        if (fileRecords[i + 1].startTime > request.EndDateTime)
                         {
                             // next file start after endDateTime. Later files will not be needed
                             fileRecords.RemoveRange(i + 1, fileRecords.Count - i - 1);
@@ -69,13 +69,24 @@ namespace eXtractor
                 }
             }
             // Get data from the listed files
-            Extract(startDateTime, endDateTime, Tags, fileRecords, interval);
+            Extract(request.StartDateTime, request.EndDateTime, Tags, fileRecords, request.Interval);
         }
 
-        // data in the class
+        /// <summary>
+        /// RawData contains the values of extracted data. Each array in the list corresponds to the data of a tag.
+        /// </summary>
         public List<float[]> RawData { get; set; }
+        /// <summary>
+        /// DateTimes contains all time stamps of the data in the extracted data
+        /// </summary>
         public DateTime[] DateTimes { get; set; }
+        /// <summary>
+        /// The tags requested. If a tag is not found in data file, Single.NaN will be written in the RawData
+        /// </summary>
         public string[] Tags { get; set; }
+        /// <summary>
+        /// pointCount is the points per tag extracted. 
+        /// </summary>
         public int pointCount;
         private string filePath;
 
@@ -469,7 +480,8 @@ namespace eXtractor
             int nColumn;
             // nPoints is the estimated numbe of data points to be extracted, based on the time interval between points
             int nPoints = 0;
-            // pointCount is the points extracted. If pointCount get to the length of the array, make the array larger
+
+            // If pointCount get to the length of the array, make the array larger
             pointCount = 0;
             // skipCounter is used to skip data points that is not wanted. skipping behavior is controlled by parameter interval
             int skipCounter = interval;
@@ -1364,7 +1376,7 @@ namespace eXtractor
         }
 
         // Write the extracted data to a file that the user specified
-        public void WriteToFile(DateTime startDateTime, DateTime endDateTime, Window owner, string fileType, string defaultPath = "")
+        public void WriteToFile(DateTime startDateTime, DateTime endDateTime, string fileType, string defaultPath = "")
         {
             
             char delimiter;
@@ -1395,7 +1407,7 @@ namespace eXtractor
             };
             
 
-            if (dialog.ShowDialog(owner) == true && dialog.FileNames != null)
+            if (dialog.ShowDialog() == true && dialog.FileNames != null)
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 try

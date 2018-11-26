@@ -70,8 +70,8 @@
         <TextBlock x:Name="testOutput1" Grid.Row="4" Text="{Binding StartDateTime, Mode=OneWay}"/>
         <TextBlock x:Name="testOutput2" Grid.Row="4" Grid.Column ="3" Text="{Binding EndDateTime, Mode=OneWay}"/>
         <-->
-        <Button Name="exportButton" Grid.Column="5" Grid.Row="4" Margin="0,4,0,0" >Export</Button>
-        <Button Name="plotButton" Grid.Column="6" Grid.Row="4" Margin="4,4,0,0">Plot</Button>
+        <Button Name="exportButton" Grid.Column="5" Grid.Row="4" Margin="0,4,0,0" Command="{Binding ExportCommand}">Export</Button>
+        <Button Name="plotButton" Grid.Column="6" Grid.Row="4" Margin="4,4,0,0" Command="{Binding PlotCommand}">Plot</Button>
 
         <Label Grid.Row="4" Grid.Column="0" HorizontalAlignment="Left">Data Interval</Label>
         <TextBox x:Name="intervalInput" Grid.Row="4" Grid.Column="1"

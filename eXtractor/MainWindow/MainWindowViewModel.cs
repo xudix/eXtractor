@@ -171,6 +171,15 @@ namespace eXtractor
             get => new RelayCommand(PickFile);
         }
 
+        public ICommand ExportCommand
+        {
+            get => new RelayCommand(model.Export);
+        }
+
+        public ICommand PlotCommand
+        {
+            get => new RelayCommand(Plot);
+        }
 
         #endregion
 
@@ -273,6 +282,30 @@ namespace eXtractor
                 SelectedFiles = (SelectedFiles != null) ? SelectedFiles.Concat(dialog.FileNames).ToArray() : dialog.FileNames;
             }
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void Plot()
+        {
+            if (SelectedTags != null && SelectedFiles != null)
+            {
+                try
+                {
+                    model.SaveSettings();
+                    PlotWindow.PlotWindowViewModel plotWindowViewModel = new PlotWindow.PlotWindowViewModel(model, this);
+                    //WeakEventManager<PlotWindow, EventArgs>.AddHandler(plotWindow, "Closed", OnPlotWindowClosed);
+                    //WeakEventManager<PlotWindow, PlotRangeChangedEventArgs>.AddHandler(plotWindow, "PlotRangeChanged", OnPlotWindowRangeChanged);
+
+                    GC.Collect();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: Fail to show plot window. Original error: " + ex.Message + "\n" + ex.StackTrace);
+                }
+            }
+        }
+
         #endregion
 
         #region INotifyPropertyChanged Implementation

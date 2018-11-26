@@ -23,7 +23,6 @@ namespace eXtractor
         public MainWindowView()
         {
             InitializeComponent();
-            var model = new ExtractionRequestModel();
         }
 
         #region The following method is used to control the double click behavior of the date and time input TextBox
