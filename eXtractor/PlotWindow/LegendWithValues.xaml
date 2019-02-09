@@ -46,7 +46,7 @@
                                          StrokeThickness="{Binding StrokeThickness}" 
                                          Stroke="{Binding Stroke}" Fill="{Binding Fill}"
                                          Stretch="Fill" Data="{Binding PointGeometry}"/>
-                                <TextBlock Grid.Column="1" Margin="4 0" Text="{Binding Title}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Margin="4 0" Text="{Binding Title}" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="120" TextWrapping="Wrap" />
                                 <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Value, Converter={StaticResource StrFloatConverter}}" />
                             </Grid>
                         </DataTemplate>
