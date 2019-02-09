@@ -63,13 +63,13 @@
     </ApplicationDefinition>
     <Compile Include="BufferedReader.cs" />
     <Compile Include="ExtractedData.cs" />
+    <Compile Include="PlotRangeChangedEventArgs.cs" />
     <Compile Include="PickTagWindow\PickTagWindowView.xaml.cs">
       <DependentUpon>PickTagWindowView.xaml</DependentUpon>
     </Compile>
     <Compile Include="PlotWindow\LegendWithValues.xaml.cs">
       <DependentUpon>LegendWithValues.xaml</DependentUpon>
     </Compile>
-    <Compile Include="PlotWindow\PlotRangeChangedEventArgs.cs" />
     <Compile Include="PlotWindow\PlotWindowView.xaml.cs">
       <DependentUpon>PlotWindowView.xaml</DependentUpon>
     </Compile>

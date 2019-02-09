@@ -16,7 +16,7 @@ namespace eXtractor.PlotWindow
     /// </summary>
     public partial class PlotWindowView : Window, INotifyPropertyChanged
     {
-        private PlotWindowViewModel viewModel;
+        PlotWindowViewModel viewModel;
 
         public PlotWindowView(PlotWindowViewModel viewModel)
         {
@@ -143,16 +143,19 @@ namespace eXtractor.PlotWindow
             e.Handled = true;
         }
 
+        /// <summary>
+        /// Move the cursor and change the zoom box when the mouse is moved
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Chart_MouseMove(object sender, MouseEventArgs e)
         {
             // Simply moving the mouse in the chart. Will move the cursor
-            Cursor1X = e.GetPosition(Chart).X;
+            Point currentPoint = e.GetPosition(Chart);
+            Cursor1X = currentPoint.X;
             if (Cursor1X > Chart.ActualWidth - Chart.ChartLegend.ActualWidth)
                 Cursor1X = Chart.ActualWidth - Chart.ChartLegend.ActualWidth;
-            //Cursor1Margin = new Thickness(position, 0, Chart.ActualWidth - position - 1, XAxis.ActualHeight);
-            UpdateLegendValues(Chart.ConvertToChartValues(new Point(Cursor1X, 0)).X);
-            //RawPoint = e.GetPosition(Chart);
-            //ConvertedPoint = Chart.ConvertToChartValues(RawPoint);
+            viewModel.UpdateLegendValues(Chart.ConvertToChartValues(currentPoint).X);
 
             // If the mouse is moving in the chart, allow the following behavior:
             // IsZoomDrawing means the mouse left button was pressed. Performing zoom
@@ -160,7 +163,6 @@ namespace eXtractor.PlotWindow
             {
                 if (e.LeftButton == MouseButtonState.Pressed)
                 {
-                    Point currentPoint = e.GetPosition(Chart);
                     double xmin = mouseDownPoint.X;
                     double xmax = currentPoint.X;
                     double ymin = currentPoint.Y;
@@ -199,7 +201,7 @@ namespace eXtractor.PlotWindow
                     ZoomBoxWidth = 0;
                 }
             }
-            else
+            else // not zooming
             {
                 if (e.LeftButton == MouseButtonState.Pressed)
                 {
@@ -208,17 +210,17 @@ namespace eXtractor.PlotWindow
                     // Previousw MouseLeftButtonDown event handler is moved here
                     // The reason is, if the user click the mouse left button outside the chart and move the mouse inside,
                     // the program won't be able to catch it. 
-                    mouseDownPoint = e.GetPosition(Chart);
+                    mouseDownPoint = currentPoint;
                     IsZoomDrawing = true;
                 }
-                else
-                {
-
-                }
-
             }
         }
 
+        /// <summary>
+        /// Perform zooming when mouse button is released
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Chart_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (IsZoomDrawing)
@@ -254,33 +256,22 @@ namespace eXtractor.PlotWindow
                 // If the start point is outside the range. No need to continue.
                 int startIndex = (int)xmin;
                 if (startIndex < 0) startIndex = 0;
-                else if (startIndex >= PointsPerLine) return;
+                else if (startIndex >= viewModel.PointsPerLine) return;
                 // If the change is too small, the user is probably not intended to zoom
                 if ((ymax - ymin) / (YAxis.ActualMaxValue - YAxis.ActualMinValue) > 0.02)
                 {
-                    YMax = ymax;
-                    YMin = ymin;
+                    viewModel.YMax = ymax;
+                    viewModel.YMin = ymin;
                 }
                 // If the change is too small, the user is probably not intended to zoom
-                if ((xmax - xmin) / PointsPerLine > 0.02)
+                if ((xmax - xmin) / viewModel.PointsPerLine > 0.02)
                 {
 
                     int endIndex = (int)Math.Ceiling(xmax);
-                    if (endIndex >= PointsPerLine) endIndex = PointsPerLine - 1;
-                    // Here we are changing the private field "startDateTime" instead of the property "StartDateTime"
-                    // because if we chagne the property, UpdatePoints() method will be invoked and DateTimeStrs will be changed.
-                    startDateTime = ExtractedData.ParseDateTime(DateTimeStrs[startIndex]);
-                    NotifyPropertyChanged("StartDateTime");
-                    // Here we invoke NotifyPropertyChanged and UpdatePoints manually because
-                    // when the zoom operation is ended (mouse up) outside the chart, EndDatTime will be the same. 
-                    // In this case, the UpdatePoints method will not be invoked. 
-                    // However, we may need to invoke it since StartDateTime may have changed.
-                    endDateTime = ExtractedData.ParseDateTime(DateTimeStrs[endIndex]);
-                    NotifyPropertyChanged("EndDateTime");
-                    UpdatePoints();
-                    PlotRangeChanged(this, new PlotRangeChangedEventArgs(startDateTime, endDateTime, this));
+                    if (endIndex >= viewModel.PointsPerLine) endIndex = viewModel.PointsPerLine - 1;
+                    viewModel.SetXRangeAndRecord(ExtractedData.ParseDateTime(viewModel.DateTimeStrs[startIndex]), ExtractedData.ParseDateTime(viewModel.DateTimeStrs[endIndex]));
                 }
-                RecordRange();
+                
             }
             //else
             //{
@@ -291,6 +282,16 @@ namespace eXtractor.PlotWindow
             //}
         }
 
+        /// <summary>
+        /// When mouse left button is pressed down, start drawing the zoom box and record the mouse down point
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Chart_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            mouseDownPoint = e.GetPosition(Chart);
+            IsZoomDrawing = true;
+        }
 
 
 

@@ -14,7 +14,11 @@ namespace eXtractor.PlotWindow
     // The Model for PlotWindow will be the ExtractedData
     public class PlotWindowViewModel: INotifyPropertyChanged
     {
-
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="extractionRequest"></param>
+        /// <param name="parent"></param>
         public PlotWindowViewModel(ExtractionRequestModel extractionRequest, MainWindowViewModel parent)
         {
             model = new ExtractedData(extractionRequest);
@@ -27,10 +31,11 @@ namespace eXtractor.PlotWindow
             currentZoomIndex = 0;
 
             if (parent != null)
-                // Subscribe the plotwindow to the
+                // Subscribe the plotwindow to the plotRangeChanged event transmitted by the main window
                 WeakEventManager<MainWindowViewModel, PlotRangeChangedEventArgs>.AddHandler(parent, "TransmitPlotRangeChanged", OnPlotWindowRangeChanged);
 
             view = new PlotWindowView(this);
+            view.Closed += (object source, EventArgs args) => PlotWindowClosed(this, args);
             view.Show();
         }
 
@@ -249,21 +254,65 @@ namespace eXtractor.PlotWindow
 
         #region Commands exposed to the View
 
+        /// <summary>
+        /// Command for the ZoomPrevious button
+        /// </summary>
         public ICommand ZoomPreviousCommand
         {
             get => new RelayCommand(() => MoveZoom(-1));
         }
 
+        /// <summary>
+        /// Command for the ZoomNext button
+        /// </summary>
         public ICommand ZoomNextCommand
         {
             get => new RelayCommand(() => MoveZoom(1));
         }
 
+        /// <summary>
+        /// Command for the X axis min reset button. Change the StartDateTime to the beginning of all data
+        /// </summary>
+        public ICommand XAxisMinResetCommand
+        {
+            get => new RelayCommand(() => StartDateTime = model.DateTimes[0]);
+        }
 
+        /// <summary>
+        /// Command for the X axis max reset button. Change the EndDateTime to the end of all data
+        /// </summary>
+        public ICommand XAxisMaxResetCommand
+        {
+            get => new RelayCommand(() => EndDateTime = model.DateTimes[model.pointCount - 1]);
+        }
+
+        /// <summary>
+        /// Command for the Y axis min reset button. Change the YMin to NaN
+        /// </summary>
+        public ICommand YAxisMinResetCommand
+        {
+            get => new RelayCommand(() => YMin = Double.NaN);
+        }
+
+        /// <summary>
+        /// Command for the Y axis max reset button. Change the YMax to NaN
+        /// </summary>
+        public ICommand YAxisMaxResetCommand
+        {
+            get => new RelayCommand(() => YMax = Double.NaN);
+        }
+
+        /// <summary>
+        /// Command for the Export button. Will call the WriteToFile method of the model
+        /// </summary>
+        public ICommand ExportCommand
+        {
+            get => new RelayCommand(() => model.WriteToFile(StartDateTime, EndDateTime, "csv"));
+        }
 
         #endregion
 
-        #region Private methods
+        #region private methods
         /// <summary>
         /// If the start/end datetime or Resolution is changed, will regenerate the PoitnsToPlot collection as well as the DateTimeStrs
         /// </summary>
@@ -318,7 +367,7 @@ namespace eXtractor.PlotWindow
             // oldIndex is the index of a point in the rawData. newIndex is that in the new array
             int oldIndex, newIndex;
             // Copy data from model.RawData
-            for (int i = 0; i < model.pointCount; i++) // for each tag (each array in rawData)
+            for (int i = 0; i < model.RawData.Count; i++) // for each tag (each array in RawData)
             {
                 // create an empty array to take the data
                 temp = new float[pointCount];
@@ -337,8 +386,9 @@ namespace eXtractor.PlotWindow
                     PointGeometry = null,
                     Fill = Brushes.Transparent,
                 };
-                PointsToPlot.Add(series);
+                newPointsToPlot.Add(series);
             }
+            PointsToPlot = newPointsToPlot;
             // copy time stamps from model.DateTimes
             string[] newDateTimeStrs = new string[pointCount];
             DateTime[] newDateTimesToPlot = new DateTime[pointCount];
@@ -352,6 +402,49 @@ namespace eXtractor.PlotWindow
             DateTimesToPlot = newDateTimesToPlot;
             DateTimeStrs = newDateTimeStrs;
         }
+
+        /// <summary>
+        /// Write the current plot rage into the plotRanges list.
+        /// This method should be called whenever the plot rnage is changed by zooming or sizing.
+        /// </summary>
+        private void RecordRange()
+        {
+            // If currentZoomIndex = plotRanges.Count-1, i.e. currently at the last zoom, then new zooming will add new entry to List plotRanges
+            // If currenZoomIndex is anything smaller, then new zooming will erase the following plotRanges and create new item
+            if (currentZoomIndex < plotRanges.Count - 1)
+                plotRanges.RemoveRange(currentZoomIndex + 1, plotRanges.Count - currentZoomIndex - 1);
+            plotRanges.Add(new PlotRange(StartDateTime, EndDateTime, YMin, YMax));
+            currentZoomIndex = plotRanges.Count - 1;
+        }
+
+
+        private void SetRange(PlotRange newRange)
+        {
+            startDateTime = newRange.startDateTime;
+            NotifyPropertyChanged("StartDateTime");
+            EndDateTime = newRange.endDateTime;
+            YMax = newRange.yMax;
+            YMin = newRange.yMin;
+        }
+
+        #endregion
+
+
+        #region Public methods exposed to View
+
+        /// <summary>
+        /// Change the rance in the X axis and record it to the List 
+        /// </summary>
+        /// <param name="newStartDatetime"></param>
+        /// <param name="newEndDateTime"></param>
+        public void SetXRangeAndRecord(DateTime newStartDatetime, DateTime newEndDateTime)
+        {
+            startDateTime = newStartDatetime;
+            NotifyPropertyChanged("StartDateTime");
+            EndDateTime = newEndDateTime;
+            RecordRange();
+        }
+
 
         /// <summary>
         /// Move the plot range to previous or next in List plotRanges
@@ -384,31 +477,7 @@ namespace eXtractor.PlotWindow
             SetRange(plotRanges[currentZoomIndex]);
         }
 
-        private void SetRange(PlotRange newRange)
-        {
-            startDateTime = newRange.startDateTime;
-            NotifyPropertyChanged("StartDateTime");
-            endDateTime = newRange.endDateTime;
-            NotifyPropertyChanged("EndDateTime");
-            if (SyncZoom)
-                PlotRangeChanged(this, new PlotRangeChangedEventArgs(startDateTime, endDateTime, this));
-            YMax = newRange.yMax;
-            YMin = newRange.yMin;
-        }
 
-        /// <summary>
-        /// Write the current plot rage into the plotRanges list.
-        /// This method should be called whenever the plot rnage is changed by zooming or sizing.
-        /// </summary>
-        private void RecordRange()
-        {
-            // If currentZoomIndex = plotRanges.Count-1, i.e. currently at the last zoom, then new zooming will add new entry to List plotRanges
-            // If currenZoomIndex is anything smaller, then new zooming will erase the following plotRanges and create new item
-            if (currentZoomIndex < plotRanges.Count - 1)
-                plotRanges.RemoveRange(currentZoomIndex + 1, plotRanges.Count - currentZoomIndex - 1);
-            plotRanges.Add(new PlotRange(StartDateTime, EndDateTime, YMin, YMax));
-            currentZoomIndex = plotRanges.Count - 1;
-        }
 
         /// <summary>
         /// Update the tag values based on the X axis positionin the chart
@@ -416,7 +485,7 @@ namespace eXtractor.PlotWindow
         /// <param name="chartValues">The X position of the point. 
         /// Typically, it shoule come from: chartValues = Chart.ConvertToChartValues(e.GetPosition(Chart)).X, 
         /// where e is a MouseEventArg</param>
-        private void UpdateLegendValues(double chartValues)
+        public void UpdateLegendValues(double chartValues)
         {
 
             int valueIndex = (int)Math.Round(chartValues);
@@ -462,7 +531,32 @@ namespace eXtractor.PlotWindow
         /// If currenZoomIndex is anything smaller, then new zooming will erase the following plotRanges and create new item
         private int currentZoomIndex;
 
+        private void OnPlotWindowRangeChanged(object source, PlotRangeChangedEventArgs e)
+        {
+            if (e.InitialSource as PlotWindowViewModel != this)
+            {
+                if (SyncZoom) // Only when SyncZoom == true will this window respond to this event
+                {
+                    if (e.StartDateTime != StartDateTime || e.EndDateTime != EndDateTime)
+                    {
+                        // We are modifying the fields to avoid firing the PlotRangeChanged event again.
+                        if (e.StartDateTime != StartDateTime)
+                        {
+                            startDateTime = e.StartDateTime;
+                            NotifyPropertyChanged("StartDateTime");
+                        }
+                        if (e.EndDateTime != EndDateTime)
+                        {
+                            endDateTime = e.EndDateTime;
+                            NotifyPropertyChanged("EndDateTime");
+                        }
+                        UpdatePoints();
+                        RecordRange();
+                    }
+                }
+            }
 
+        }
 
 
         #endregion
@@ -485,12 +579,20 @@ namespace eXtractor.PlotWindow
 
         #endregion
 
+        #region Events
         /// <summary>
         /// This event is fired when SyncZoom is true and the X range of the plot is changed.
         /// The event fired here is subscribed by the MainWindow, which will transmit the event to other PlotWindows
         /// The listeners (PlotWindows) with SyncZoom set to true will update the X range of their plot
         /// </summary>
         public event EventHandler<PlotRangeChangedEventArgs> PlotRangeChanged = delegate { };
+
+        /// <summary>
+        /// This event is fired when the view is closed. It's used to relay the Closed event to the main window
+        /// </summary>
+        public event EventHandler<EventArgs> PlotWindowClosed = delegate { };
+
+        #endregion
 
         /// <summary>
         /// This struct contains information of the min and max of both X and Y axis in the plot
@@ -510,5 +612,6 @@ namespace eXtractor.PlotWindow
                 this.yMin = yMin;
             }
         }
+        
     }
 }

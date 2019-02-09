@@ -6,14 +6,14 @@
         xmlns:local="clr-namespace:eXtractor.PlotWindow"
         xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         mc:Ignorable="d"
-        Name="plotWindow"
+        Name="plotWindowView"
         Title="Plot" Height="450" Width="900">
     <Window.Resources>
         <local:StringDateTimeConverter x:Key="StrDateTimeConverter"/>
         <local:StrDoubleConverter x:Key="StrDoubleConverter"/>
-        <local:LegendWithValues x:Key="LegendWithValues"
-            Orientation="Vertical" Values="{Binding Path=Cursor1Values, Source={x:Reference Name=plotWindow}}" 
-            XValue ="{Binding Cursor1Time, Source={x:Reference Name=plotWindow}}"/>
+        <!--local:LegendWithValues x:Key="LegendWithValues"
+            Orientation="Vertical" Values="{Binding Path=Cursor1Values, Source={x:Reference Name=plotWindowView.viewModel}}" 
+            XValue ="{Binding Cursor1Time, Source={x:Reference Name=plotWindowView.viewModel}}"/-->
         <local:CursorHeightCalc x:Key="CursorHeightCalc"/>
     </Window.Resources>
     <DockPanel>
@@ -45,7 +45,9 @@
                             DisableAnimations="True" Hoverable="False" DataTooltip="{x:Null}"
                             MouseMove="Chart_MouseMove" Background="Transparent" MouseLeftButtonDown="Chart_MouseLeftButtonDown">
                 <lvc:CartesianChart.ChartLegend>
-                    <StaticResource ResourceKey="LegendWithValues"/>
+                    <local:LegendWithValues Orientation="Vertical" Values="{Binding Path=Cursor1Values}" 
+                    XValue ="{Binding Cursor1Time}"/>
+                    <!--StaticResource ResourceKey="LegendWithValues"/-->
                 </lvc:CartesianChart.ChartLegend>
                 <lvc:CartesianChart.AxisY>
                     <lvc:Axis Name="YAxis" Title="{Binding Text, Source={x:Reference yTitleInput}, Mode=OneWay}" Foreground="Black"  
@@ -57,7 +59,7 @@
                     <lvc:Axis Name="XAxis" Title="{Binding Text, Source={x:Reference xTitleInput}, Mode=OneWay}" Foreground="Black" Labels="{Binding DateTimeStrs}" ></lvc:Axis>
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
-            <Rectangle x:Name="ZoomBox" Grid.Column="1" Width="{Binding ZoomBoxWidth}" Height="{Binding ZoomBoxHeight}" Margin="{Binding ZoomBoxMargin}"
+            <Rectangle x:Name="ZoomBox" Grid.Column="1" DataContext="{x:Reference plotWindowView}" Width="{Binding ZoomBoxWidth}" Height="{Binding ZoomBoxHeight}" Margin="{Binding ZoomBoxMargin}"
                        Stroke="#FF9000FF" StrokeThickness="1" Grid.Row="1" MouseMove="Chart_MouseMove">
                 <!--Most events at the chart will have to be added for the ZoomBox rectangle. 
                 Otherwise the program may not respond to the mouseup event-->
@@ -72,7 +74,7 @@
                     </Style>
                 </Rectangle.Style>
             </Rectangle>
-            <ContentControl Grid.Column="1" Grid.Row="1" MouseDoubleClick="Chart_MouseDoubleClick" MouseLeftButtonDown="Chart_MouseLeftButtonDown">
+            <ContentControl Grid.Column="1" Grid.Row="1" DataContext="{x:Reference plotWindowView}" MouseDoubleClick="Chart_MouseDoubleClick" MouseLeftButtonDown="Chart_MouseLeftButtonDown">
                 <Line x:Name="CursorLine1" Grid.Column="1" Grid.Row="1" 
                        Stroke="Red" StrokeThickness="1" MouseMove="Chart_MouseMove" X1="{Binding Cursor1X}" X2="{Binding Cursor1X}"
                        >
@@ -161,24 +163,24 @@
                     <Label Grid.Row="7" Margin="10,0,0,0">From</Label>
                     <TextBox x:Name="xAxisMinnput" Grid.Row="7" Grid.Column="1" Margin="0,2"
                             Text="{Binding StartDateTime, Converter={StaticResource StrDateTimeConverter}}" Width="120"/>
-                    <Button x:Name="xAxisMinReset" Grid.Row="7" Grid.Column="2" Margin="5,5,0,5" Click="XAxisMinReset_Click">Reset</Button>
+                    <Button x:Name="xAxisMinReset" Grid.Row="7" Grid.Column="2" Margin="5,5,0,5" Command="{Binding XAxisMinResetCommand}">Reset</Button>
                     <Label Grid.Row="8" Margin="10,0,0,0">To</Label>
                     <TextBox x:Name="xAxisMaxInput" Grid.Row="8" Grid.Column="1" Margin="0,2"
                             Text="{Binding EndDateTime, Converter={StaticResource StrDateTimeConverter}}"></TextBox>
-                    <Button x:Name="xAxisMaxReset" Grid.Row="8" Grid.Column="2" Margin="5,5,0,5" Click="XAxisMaxReset_Click">Reset</Button>
+                    <Button x:Name="xAxisMaxReset" Grid.Row="8" Grid.Column="2" Margin="5,5,0,5" Command="{Binding XAxisMaxResetCommand}">Reset</Button>
                     <Label Grid.Row="9" Grid.ColumnSpan="3">Y Axis Range</Label>
                     <Label Grid.Row="10" Margin="10,0,0,0">From</Label>
                     <TextBox x:Name="yAxisMinnput" Grid.Row="10" Grid.Column="1" Margin="0,2"
                             Text="{Binding YMin, Converter={StaticResource StrDoubleConverter}}" />
-                    <Button x:Name="yAxisMinReset" Grid.Row="10" Grid.Column="2" Margin="5,5,0,5" Click="YAxisMinReset_Click">Reset</Button>
+                    <Button x:Name="yAxisMinReset" Grid.Row="10" Grid.Column="2" Margin="5,5,0,5" Command="{Binding YAxisMinResetCommand}">Reset</Button>
                     <Label Grid.Row="11" Margin="10,0,0,0">To</Label>
                     <TextBox x:Name="yAxisMaxInput" Grid.Row="11" Grid.Column="1" Margin="0,2" 
                             Text="{Binding YMax, Converter={StaticResource StrDoubleConverter}}"></TextBox>
-                    <Button x:Name="yAxisMaxReset" Grid.Row="11" Grid.Column="2" Margin="5,5,0,5" Click="YAxisMaxReset_Click">Reset</Button>
+                    <Button x:Name="yAxisMaxReset" Grid.Row="11" Grid.Column="2" Margin="5,5,0,5" Command="{Binding YAxisMaxResetCommand}">Reset</Button>
                     <Label Grid.Row="12">Resolution</Label>
                     <TextBox x:Name="resolutionInput" Grid.Row="12" Grid.Column="1" Margin="0,2" Text="{Binding Resolution}"></TextBox>
                     <CheckBox x:Name="SyncZoomCheckBox" Grid.Row="13" Grid.ColumnSpan="3" IsChecked="{Binding SyncZoom, Mode=TwoWay}">Synchronize Zooming</CheckBox>
-                    <Button x:Name="exportButton" Grid.Row="14" Grid.Column="2" Margin="5,5,0,5" Click="ExportButton_Click">Export</Button>
+                    <Button x:Name="exportButton" Grid.Row="14" Grid.Column="2" Margin="5,5,0,5" Command="{Binding ExportCommand}">Export</Button>
                 </Grid>
             </ScrollViewer>
 

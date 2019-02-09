@@ -1374,8 +1374,14 @@ namespace eXtractor
             }
 
         }
-
-        // Write the extracted data to a file that the user specified
+        
+        /// <summary>
+        /// Write the extracted data to a file that the user specified
+        /// </summary>
+        /// <param name="startDateTime"></param>
+        /// <param name="endDateTime"></param>
+        /// <param name="fileType">Currently support "csv" and "txt".</param>
+        /// <param name="defaultPath"></param>
         public void WriteToFile(DateTime startDateTime, DateTime endDateTime, string fileType, string defaultPath = "")
         {
             

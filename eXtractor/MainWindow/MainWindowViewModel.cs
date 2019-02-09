@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using eXtractor.PlotWindow;
 
 namespace eXtractor
 {
@@ -284,7 +285,7 @@ namespace eXtractor
         }
 
         /// <summary>
-        /// 
+        /// Generate a new plot (PlotWindowViewModel), add it to the List plotWindows, and subscribe to the Closed and PlotRangeChanged event
         /// </summary>
         private void Plot()
         {
@@ -293,9 +294,10 @@ namespace eXtractor
                 try
                 {
                     model.SaveSettings();
-                    PlotWindow.PlotWindowViewModel plotWindowViewModel = new PlotWindow.PlotWindowViewModel(model, this);
-                    //WeakEventManager<PlotWindow, EventArgs>.AddHandler(plotWindow, "Closed", OnPlotWindowClosed);
-                    //WeakEventManager<PlotWindow, PlotRangeChangedEventArgs>.AddHandler(plotWindow, "PlotRangeChanged", OnPlotWindowRangeChanged);
+                    PlotWindowViewModel plotWindowViewModel = new PlotWindowViewModel(model, this);
+                    plotWindows.Add(plotWindowViewModel);
+                    WeakEventManager<PlotWindowViewModel, EventArgs>.AddHandler(plotWindowViewModel, "PlotWindowClosed", OnPlotWindowClosed);
+                    WeakEventManager<PlotWindowViewModel, PlotRangeChangedEventArgs>.AddHandler(plotWindowViewModel, "PlotRangeChanged", OnPlotWindowRangeChanged);
 
                     GC.Collect();
                 }
@@ -305,6 +307,37 @@ namespace eXtractor
                 }
             }
         }
+
+
+        /// <summary>
+        /// Remove the closed plot window from the List plotWindows
+        /// </summary>
+        /// <param name="source">The window being closed</param>
+        /// <param name="e"></param>
+        private void OnPlotWindowClosed(object source, EventArgs e)
+        {
+            plotWindows.Remove(source as PlotWindowViewModel);
+            GC.Collect();
+        }
+
+        /// <summary>
+        /// Transmit the PlotWindowRangeChagned event back to the plot windows
+        /// </summary>
+        /// <param name="source">The plot window </param>
+        /// <param name="e"></param>
+        private void OnPlotWindowRangeChanged(object source, PlotRangeChangedEventArgs e)
+        {
+            TransmitPlotRangeChanged(this, e);
+        }
+
+        #endregion
+
+        #region private fields
+
+        /// <summary>
+        /// A list of all plot windows generated from this main window
+        /// </summary>
+        private List<PlotWindowViewModel> plotWindows = new List<PlotWindowViewModel>();
 
         #endregion
 
@@ -323,6 +356,17 @@ namespace eXtractor
         /// The CallerMemberName attribute that is applied to the optional propertyName parameter causes the property name of the caller to be substituted as an argument.
         private void NotifyPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] String propertyName = "") =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        #endregion
+
+        #region Events for plot synchronization
+        
+        /// <summary>
+        /// This event is fired when SyncZoom is true and the X range of the plot is changed.
+        /// When the MainWindow receive a PlotRangeChanged event from a PlotWindow, it transmit it to all PlotWindows.
+        /// The listeners (PlotWindows) with SyncZoom set to true will update the X range of their plot
+        /// </summary>
+        public event EventHandler<PlotRangeChangedEventArgs> TransmitPlotRangeChanged = delegate { };
 
         #endregion
     }

@@ -30,7 +30,7 @@ namespace eXtractor.PlotWindow
         {
             InitializeComponent();
             SeriesWithValue = SeriesWithValueViewModel.CreateList(Series, Values);
-            DataContext = this;
+            //DataContext = this;
         }
 
         /// <summary>

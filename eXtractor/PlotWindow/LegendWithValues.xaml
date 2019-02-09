@@ -15,16 +15,16 @@
         <ControlTemplate>
             <StackPanel Margin="0,0,15,0">
                 <!--Put a right margin of 15 on the stack panel because the width of the XValueText in the TextBlock may change, but the legend width won't change. So leave some margin here to display the full text-->
-                <TextBlock Text="{Binding XValue}"/>
-                <ItemsControl ItemsSource="{Binding SeriesWithValue}">
+                <TextBlock Text="{Binding XValue, ElementName=This}"/>
+                <ItemsControl ItemsSource="{Binding SeriesWithValue, ElementName=This}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel MaxWidth="{Binding MaxWidth, ElementName=This}"
                                        MaxHeight="{Binding MaxHeight, ElementName=This}">
                                 <WrapPanel.Orientation>
                                     <MultiBinding Converter="{StaticResource OrientationConverter}">
-                                        <Binding Path="Orientation"/>
-                                        <Binding Path="InternalOrientation"/>
+                                        <Binding Path="Orientation" ElementName="This"/>
+                                        <Binding Path="InternalOrientation" ElementName="This"/>
                                     </MultiBinding>
                                 </WrapPanel.Orientation>
                             </WrapPanel>
