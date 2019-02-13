@@ -56,9 +56,10 @@
                     <!-->For some reason you have to use x:Reference here. It seems that the TitleInput is not visible in Chart<-->
                 </lvc:CartesianChart.AxisY>
                 <lvc:CartesianChart.AxisX>
-                    <lvc:Axis Name="XAxis" Title="{Binding Text, Source={x:Reference xTitleInput}, Mode=OneWay}" Foreground="Black" Labels="{Binding DateTimeStrs}" ></lvc:Axis>
+                    <lvc:Axis Name="XAxis" LabelFormatter="{Binding DateTimeFormatter}" Title="{Binding Text, Source={x:Reference xTitleInput}, Mode=OneWay}" Foreground="Black" ></lvc:Axis>
                 </lvc:CartesianChart.AxisX>
             </lvc:CartesianChart>
+            <!--The zoom box-->
             <Rectangle x:Name="ZoomBox" Grid.Column="1" DataContext="{x:Reference plotWindowView}" Width="{Binding ZoomBoxWidth}" Height="{Binding ZoomBoxHeight}" Margin="{Binding ZoomBoxMargin}"
                        Stroke="#FF9000FF" StrokeThickness="1" Grid.Row="1" MouseMove="Chart_MouseMove">
                 <!--Most events at the chart will have to be added for the ZoomBox rectangle. 
@@ -74,6 +75,7 @@
                     </Style>
                 </Rectangle.Style>
             </Rectangle>
+            <!--The cursur line. ContentControl is required to host events-->
             <ContentControl Grid.Column="1" Grid.Row="1" DataContext="{x:Reference plotWindowView}" MouseDoubleClick="Chart_MouseDoubleClick" MouseLeftButtonDown="Chart_MouseLeftButtonDown">
                 <Line x:Name="CursorLine1" Grid.Column="1" Grid.Row="1" 
                        Stroke="Red" StrokeThickness="1" MouseMove="Chart_MouseMove" X1="{Binding Cursor1X}" X2="{Binding Cursor1X}"

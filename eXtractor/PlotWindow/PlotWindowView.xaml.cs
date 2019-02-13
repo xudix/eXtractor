@@ -21,8 +21,9 @@ namespace eXtractor.PlotWindow
         public PlotWindowView(PlotWindowViewModel viewModel)
         {
             this.viewModel = viewModel;
-            InitializeComponent();
             DataContext = this.viewModel;
+            InitializeComponent();
+            settingButton.IsChecked = false;
         }
 
         #region Properties and fields related to zoom behavior
@@ -157,7 +158,7 @@ namespace eXtractor.PlotWindow
                 Cursor1X = Chart.ActualWidth - Chart.ChartLegend.ActualWidth;
             viewModel.UpdateLegendValues(Chart.ConvertToChartValues(currentPoint).X);
 
-            // If the mouse is moving in the chart, allow the following behavior:
+            // If the mouse is moving in the chart, check if it's zooming. If zooming, will draw zoom box; otherwise, will check if we should enter zooming mode
             // IsZoomDrawing means the mouse left button was pressed. Performing zoom
             if (IsZoomDrawing)
             {
@@ -253,23 +254,21 @@ namespace eXtractor.PlotWindow
                     ymin = ymax;
                     ymax = temp;
                 }
-                // If the start point is outside the range. No need to continue.
-                int startIndex = (int)xmin;
-                if (startIndex < 0) startIndex = 0;
-                else if (startIndex >= viewModel.PointsPerLine) return;
-                // If the change is too small, the user is probably not intended to zoom
+                // keep the new range within the previous range
+                //xmin = (xmin < XAxis.ActualMinValue ? XAxis.ActualMinValue : xmin);
+                //xmax = (xmax > XAxis.ActualMaxValue ? XAxis.ActualMaxValue : xmax);
+                // if the new range is not inside the previous range, will do nothing
+                if (xmin >= XAxis.ActualMaxValue || xmax <= XAxis.ActualMinValue) return;
+                // Zoom in Y axis. If the change is too small, the user is probably not intended to zoom
                 if ((ymax - ymin) / (YAxis.ActualMaxValue - YAxis.ActualMinValue) > 0.02)
                 {
                     viewModel.YMax = ymax;
                     viewModel.YMin = ymin;
                 }
-                // If the change is too small, the user is probably not intended to zoom
-                if ((xmax - xmin) / viewModel.PointsPerLine > 0.02)
+                // Zoom in X axis. If the change is too small, the user is probably not intended to zoom
+                if ((xmax - xmin) / (XAxis.ActualMaxValue - XAxis.ActualMinValue) > 0.02)
                 {
-
-                    int endIndex = (int)Math.Ceiling(xmax);
-                    if (endIndex >= viewModel.PointsPerLine) endIndex = viewModel.PointsPerLine - 1;
-                    viewModel.SetXRangeAndRecord(ExtractedData.ParseDateTime(viewModel.DateTimeStrs[startIndex]), ExtractedData.ParseDateTime(viewModel.DateTimeStrs[endIndex]));
+                    viewModel.SetXRangeAndRecord(new DateTime((long)(xmin * TimeSpan.FromDays(1).Ticks)), new DateTime((long)(xmax * TimeSpan.FromDays(1).Ticks)));
                 }
                 
             }

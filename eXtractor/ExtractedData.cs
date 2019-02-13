@@ -461,7 +461,7 @@ namespace eXtractor
             RawData = new List<float[]>(tagList.Length);
             // use a temporary array to store the data obtained from each line
             float[] dataOfOnePoint = new float[tagList.Length];
-            DateTime dateTime1;
+            DateTime dateTime1 = DateTime.MaxValue;
 
             // A string that represents a line from the csv file. line1 and line2 are the first two lines.
             // Reading the first two lines allows the method to determine the time interval between the two lines, which is used to size the arrays
@@ -511,6 +511,8 @@ namespace eXtractor
                     string[] refOfTags = new string[tagList.Length];
                     int[] positions = new int[tagList.Length];
                     Task parseRowTask = Task.Run(()=> { });
+                    // Variable for OADate used in Excel, which use a double number to represent a time.
+                    double oaDate;
                     //List<RefWithPosition> strIndexOfTags = new List<RefWithPosition>(tagList.Length);
 
                     // Create SpreadsheetDocument object to represent the excel file
@@ -619,50 +621,23 @@ namespace eXtractor
                             // If it's not the first file, the streamreader is at the 2nd row
                             do
                             {
-                                dateTime1 = DateTime.FromOADate(XlsxTool.GetDoubleFromRow(row, "A"));
-                                if (dateTime1 > endDateTime) // if the time stamp is later than endDateTime, no need to continue.
-                                    break;
-                                else if (dateTime1 >= startDateTime) // Data point is within requested range
+                                oaDate = XlsxTool.GetDoubleFromRow(row, "A");
+                                if (!Double.IsNaN(oaDate)) // If the row start with a time, continue. otherwise, skip it.
                                 {
-                                    // Wait until parseRowRask task to be done so that we have updated DateTimes array
-                                    parseRowTask.Wait();
-                                    if (pointCount > 0 && dateTime1 == DateTimes[pointCount - 1])
+                                    dateTime1 = DateTime.FromOADate(oaDate);
+                                    if (dateTime1 > endDateTime) // if the time stamp is later than endDateTime, no need to continue.
+                                        break;
+                                    else if (dateTime1 >= startDateTime) // Data point is within requested range
                                     {
-                                        // New time stamp is same as previous
-                                        // override the previous data by this one
-                                        parseRowTask = Task.Run(() =>
+                                        // Wait until parseRowRask task to be done so that we have updated DateTimes array
+                                        parseRowTask.Wait();
+                                        if (pointCount > 0 && dateTime1 == DateTimes[pointCount - 1])
                                         {
-                                            pointCount--;
-                                            XlsxTool.GetFloatsFromRow(row, refOfTags, ref dataOfOnePoint);
-                                            for (i = 0; i < positions.Length; i++)
-                                                RawData[positions[i]][pointCount] = dataOfOnePoint[i];
-                                            pointCount++;
-                                            skipCounter = 1;
-                                        });
-                                    }
-                                    else
-                                    {
-                                        if (skipCounter == interval) // will take the point. Otherwise, will skip
-                                        {
-                                            
+                                            // New time stamp is same as previous
+                                            // override the previous data by this one
                                             parseRowTask = Task.Run(() =>
                                             {
-                                                if (pointCount == nPoints) // if for some reason the array is not large enough
-                                                {
-                                                    // double the size of the array
-                                                    nPoints *= 2;
-                                                    Console.WriteLine("Expanding array from {0} to {1} elements", pointCount, nPoints);
-                                                    for (i = 0; i < positions.Length; i++)
-                                                    {
-                                                        float[] temp = new float[nPoints];
-                                                        Array.Copy(RawData[i], temp, pointCount);
-                                                        RawData[i] = temp;
-                                                    }
-                                                    DateTime[] tempDateTime = new DateTime[nPoints];
-                                                    Array.Copy(DateTimes, tempDateTime, pointCount);
-                                                    DateTimes = tempDateTime;
-                                                }
-                                                DateTimes[pointCount] = dateTime1;
+                                                pointCount--;
                                                 XlsxTool.GetFloatsFromRow(row, refOfTags, ref dataOfOnePoint);
                                                 for (i = 0; i < positions.Length; i++)
                                                     RawData[positions[i]][pointCount] = dataOfOnePoint[i];
@@ -671,7 +646,38 @@ namespace eXtractor
                                             });
                                         }
                                         else
-                                            skipCounter++;
+                                        {
+                                            if (skipCounter == interval) // will take the point. Otherwise, will skip
+                                            {
+                                            
+                                                parseRowTask = Task.Run(() =>
+                                                {
+                                                    if (pointCount == nPoints) // if for some reason the array is not large enough
+                                                    {
+                                                        // double the size of the array
+                                                        nPoints *= 2;
+                                                        Console.WriteLine("Expanding array from {0} to {1} elements", pointCount, nPoints);
+                                                        for (i = 0; i < positions.Length; i++)
+                                                        {
+                                                            float[] temp = new float[nPoints];
+                                                            Array.Copy(RawData[i], temp, pointCount);
+                                                            RawData[i] = temp;
+                                                        }
+                                                        DateTime[] tempDateTime = new DateTime[nPoints];
+                                                        Array.Copy(DateTimes, tempDateTime, pointCount);
+                                                        DateTimes = tempDateTime;
+                                                    }
+                                                    DateTimes[pointCount] = dateTime1;
+                                                    XlsxTool.GetFloatsFromRow(row, refOfTags, ref dataOfOnePoint);
+                                                    for (i = 0; i < positions.Length; i++)
+                                                        RawData[positions[i]][pointCount] = dataOfOnePoint[i];
+                                                    pointCount++;
+                                                    skipCounter = 1;
+                                                });
+                                            }
+                                            else
+                                                skipCounter++;
+                                        }
                                     }
                                 }
                                 row = worksheetReader.GetNextRow();
