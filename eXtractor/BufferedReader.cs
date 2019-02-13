@@ -17,7 +17,7 @@ namespace eXtractor
 
         private int index;
 
-        private bool usingBuffer1, fileEnded = false;
+        private bool usingBuffer1;
 
         private Task<int> reloadTask;
 

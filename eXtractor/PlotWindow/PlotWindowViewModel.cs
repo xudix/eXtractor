@@ -117,10 +117,7 @@ namespace eXtractor.PlotWindow
         /// <summary>
         /// The actual number of points on each line in the plot. 
         /// </summary>
-        public int PointsPerLine
-        {
-            get => dateTimeStrs.Length;
-        }
+        public int PointsPerLine { get; set; }
 
         /// <summary>
         /// This property decides whether this plot window will zoom with other synchronized plot windows.
@@ -139,14 +136,14 @@ namespace eXtractor.PlotWindow
                 => startDateTime;
             set
             {
-                if (startDateTime != value)
-                {
+                //if (startDateTime != value)
+                //{
                     startDateTime = value;
                     UpdatePoints();
                     if (SyncZoom)
                         PlotRangeChanged(this, new PlotRangeChangedEventArgs(startDateTime, endDateTime, this));
                     NotifyPropertyChanged();
-                }
+                //}
             }
         }
 
@@ -161,14 +158,14 @@ namespace eXtractor.PlotWindow
                 => endDateTime;
             set
             {
-                if (endDateTime != value)
-                {
+                //if (endDateTime != value)
+                //{
                     endDateTime = value;
                     UpdatePoints();
                     if (SyncZoom)
                         PlotRangeChanged(this, new PlotRangeChangedEventArgs(startDateTime, endDateTime, this));
                     NotifyPropertyChanged();
-                }
+                //}
             }
         }
 
@@ -250,6 +247,8 @@ namespace eXtractor.PlotWindow
             }
         }
 
+        public Func<double, string> DateTimeFormatter { get; set; }
+
         #endregion
 
         #region Commands exposed to the View
@@ -325,10 +324,11 @@ namespace eXtractor.PlotWindow
             {
                 PointsToPlot = newPointsToPlot;
                 DateTimesToPlot = new DateTime[0];
-                DateTimeStrs = new string[0];
+                //DateTimeStrs = new string[0];
                 return;
             }
-                
+            // Set the formatter that converts the number to a string
+            DateTimeFormatter = value => new DateTime((long)(value * TimeSpan.FromDays(1).Ticks)).ToString(DateTimeFormat);
             if (startDateTime > endDateTime)
             {
                 DateTime tempDateTime = startDateTime;
@@ -343,7 +343,7 @@ namespace eXtractor.PlotWindow
             {
                 PointsToPlot = newPointsToPlot;
                 DateTimesToPlot = new DateTime[0];
-                DateTimeStrs = new string[0];
+                //DateTimeStrs = new string[0];
                 return;
             }
             endIndex = startIndex;
@@ -357,7 +357,7 @@ namespace eXtractor.PlotWindow
             if (endIndex == -1)
                 endIndex = model.pointCount - 1;
             // The local variable for storing the points to be plotted
-            float[] temp;
+            ValWithTimeStamp[] temp;
             // Figure out actual interval to take points from ExtractedData to pointsToPlot
             int interval = (endIndex - startIndex) / (resolution - 1);
             if (interval < 1)
@@ -370,18 +370,23 @@ namespace eXtractor.PlotWindow
             for (int i = 0; i < model.RawData.Count; i++) // for each tag (each array in RawData)
             {
                 // create an empty array to take the data
-                temp = new float[pointCount];
+                temp = new ValWithTimeStamp[pointCount];
                 oldIndex = startIndex;
                 // copy data from the array of values
                 for (newIndex = 0; newIndex < pointCount; newIndex++)
                 {
-                    temp[newIndex] = model.RawData[i][oldIndex];
+                    //temp[newIndex].Value = model.RawData[i][oldIndex];
+                    //temp[newIndex].TimeStamp = model.DateTimes[oldIndex];
+                    temp[newIndex] = new ValWithTimeStamp() {
+                        Value = model.RawData[i][oldIndex],
+                        TimeStamp = model.DateTimes[oldIndex]
+                    };
                     oldIndex += interval;
                 }
-                var series = new LineSeries()
+                var series = new LineSeries(dateTimeConfig)
                 {
                     Title = model.Tags[i],
-                    Values = new ChartValues<float>(temp),
+                    Values = new ChartValues<ValWithTimeStamp>(temp),
                     LineSmoothness = 0,
                     PointGeometry = null,
                     Fill = Brushes.Transparent,
@@ -389,18 +394,19 @@ namespace eXtractor.PlotWindow
                 newPointsToPlot.Add(series);
             }
             PointsToPlot = newPointsToPlot;
+            PointsPerLine = pointCount;
             // copy time stamps from model.DateTimes
-            string[] newDateTimeStrs = new string[pointCount];
+            //string[] newDateTimeStrs = new string[pointCount];
             DateTime[] newDateTimesToPlot = new DateTime[pointCount];
             oldIndex = startIndex;
             for (newIndex = 0; newIndex < pointCount; newIndex++)
             {
                 newDateTimesToPlot[newIndex] = model.DateTimes[oldIndex];
-                newDateTimeStrs[newIndex] = newDateTimesToPlot[newIndex].ToString(DateTimeFormat);
+                //newDateTimeStrs[newIndex] = newDateTimesToPlot[newIndex].ToString(DateTimeFormat);
                 oldIndex += interval;
             }
             DateTimesToPlot = newDateTimesToPlot;
-            DateTimeStrs = newDateTimeStrs;
+            //DateTimeStrs = newDateTimeStrs;
         }
 
         /// <summary>
@@ -425,6 +431,38 @@ namespace eXtractor.PlotWindow
             EndDateTime = newRange.endDateTime;
             YMax = newRange.yMax;
             YMin = newRange.yMin;
+        }
+
+        /// <summary>
+        /// When the range of another window is changed and these windows are all in SyncZoom mode, adjust the X range of this plot
+        /// </summary>
+        /// <param name="source">The plot that chagned range. If the source is this plot, will do nothing.</param>
+        /// <param name="e">This PlotRangeChangedEventArgs contains the new range.</param>
+        private void OnPlotWindowRangeChanged(object source, PlotRangeChangedEventArgs e)
+        {
+            if (e.InitialSource as PlotWindowViewModel != this)
+            {
+                if (SyncZoom) // Only when SyncZoom == true will this window respond to this event
+                {
+                    if (e.StartDateTime != StartDateTime || e.EndDateTime != EndDateTime)
+                    {
+                        // We are modifying the fields to avoid firing the PlotRangeChanged event again.
+                        if (e.StartDateTime != StartDateTime)
+                        {
+                            startDateTime = e.StartDateTime;
+                            NotifyPropertyChanged("StartDateTime");
+                        }
+                        if (e.EndDateTime != EndDateTime)
+                        {
+                            endDateTime = e.EndDateTime;
+                            NotifyPropertyChanged("EndDateTime");
+                        }
+                        UpdatePoints();
+                        RecordRange();
+                    }
+                }
+            }
+
         }
 
         #endregion
@@ -482,27 +520,37 @@ namespace eXtractor.PlotWindow
         /// <summary>
         /// Update the tag values based on the X axis positionin the chart
         /// </summary>
-        /// <param name="chartValues">The X position of the point. 
+        /// <param name="chartValue">The X position of the point. 
         /// Typically, it shoule come from: chartValues = Chart.ConvertToChartValues(e.GetPosition(Chart)).X, 
         /// where e is a MouseEventArg</param>
-        public void UpdateLegendValues(double chartValues)
+        public void UpdateLegendValues(double chartValue)
         {
-
-            int valueIndex = (int)Math.Round(chartValues);
-            if (valueIndex >= 0 && valueIndex < PointsPerLine)
+            DateTime cursorDateTime = new DateTime((long)(chartValue * TimeSpan.FromDays(1).Ticks));
+            // Find the location of the cursor datetime in the data
+            int valueIndex = 0;
+            for(;valueIndex < PointsPerLine; valueIndex++)
             {
-                // If we change the elements of CursorValues one by one, the setter will not be called, and NotifyPropertyChanged will not be fired
-                // In addition, the DependencyProperty in LegendWith Values will be changed but the PropertyChangedCallback will not be triggered
-                // This is probably because the array object (reference to the array) is never chagned. 
-                // Assigning a new array to it will trigger the PropertyChangedCallback
-                float[] temp = new float[model.Tags.Length];
-                for (int i = 0; i < PointsToPlot.Count; i++)
-                {
-                    temp[i] = (float)PointsToPlot[i].Values[valueIndex];
-                }
-                Cursor1Values = temp;
-                Cursor1Time = DateTimeStrs[valueIndex];
+                if (DateTimesToPlot[valueIndex] >= cursorDateTime) break;
             }
+            if (valueIndex > 0 && valueIndex < PointsPerLine) // determine which of the two adjacent points is closest to the cursor datetime
+            {
+                if (DateTimesToPlot[valueIndex] - cursorDateTime > cursorDateTime - DateTimesToPlot[valueIndex - 1]) // Cursor datetime is closer to the previous point
+                    valueIndex--;
+            }
+            else if (valueIndex == PointsPerLine) // The cursor datetime is after the end time of the plot, use the last point in the plot
+                valueIndex--;
+            
+            // If we change the elements of CursorValues one by one, the setter will not be called, and NotifyPropertyChanged will not be fired
+            // In addition, the DependencyProperty in LegendWith Values will be changed but the PropertyChangedCallback will not be triggered
+            // This is probably because the array object (reference to the array) is never chagned. 
+            // Assigning a new array to it will trigger the PropertyChangedCallback
+            float[] temp = new float[model.Tags.Length];
+            for (int i = 0; i < PointsToPlot.Count; i++)
+            {
+                temp[i] = ((ValWithTimeStamp)PointsToPlot[i].Values[valueIndex]).Value;
+            }
+            Cursor1Values = temp;
+            Cursor1Time = DateTimesToPlot[valueIndex].ToString(DateTimeFormat);
         }
 
         #endregion
@@ -531,33 +579,12 @@ namespace eXtractor.PlotWindow
         /// If currenZoomIndex is anything smaller, then new zooming will erase the following plotRanges and create new item
         private int currentZoomIndex;
 
-        private void OnPlotWindowRangeChanged(object source, PlotRangeChangedEventArgs e)
-        {
-            if (e.InitialSource as PlotWindowViewModel != this)
-            {
-                if (SyncZoom) // Only when SyncZoom == true will this window respond to this event
-                {
-                    if (e.StartDateTime != StartDateTime || e.EndDateTime != EndDateTime)
-                    {
-                        // We are modifying the fields to avoid firing the PlotRangeChanged event again.
-                        if (e.StartDateTime != StartDateTime)
-                        {
-                            startDateTime = e.StartDateTime;
-                            NotifyPropertyChanged("StartDateTime");
-                        }
-                        if (e.EndDateTime != EndDateTime)
-                        {
-                            endDateTime = e.EndDateTime;
-                            NotifyPropertyChanged("EndDateTime");
-                        }
-                        UpdatePoints();
-                        RecordRange();
-                    }
-                }
-            }
-
-        }
-
+        /// <summary>
+        /// This mapper is used to show a value with time stamp in a charg
+        /// </summary>
+        private LiveCharts.Configurations.CartesianMapper<ValWithTimeStamp> dateTimeConfig = LiveCharts.Configurations.Mappers.Xy<ValWithTimeStamp>()
+            .X(valWithTimeStamp => (double)valWithTimeStamp.TimeStamp.Ticks/TimeSpan.FromDays(1).Ticks)
+            .Y(valWithTimeStamp => valWithTimeStamp.Value);
 
         #endregion
 
@@ -613,5 +640,10 @@ namespace eXtractor.PlotWindow
             }
         }
         
+        private class ValWithTimeStamp
+        {
+            public DateTime TimeStamp { get; set; }
+            public float Value { get; set; }
+        }
     }
 }
